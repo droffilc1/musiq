@@ -15,7 +15,7 @@ const Profile = ({ token }: { token: string }) => {
 
   return (
     <>
-      <section className="bg-[#181818]">
+      <section className="bg-[#181818] min-h-screen text-white">
         <div>
           {data?.images && data.images[0] ? (
             <img
@@ -48,7 +48,7 @@ const Profile = ({ token }: { token: string }) => {
           </li>
         </ul>
         {error2 && (
-          <div style={{ color: "red" }}>Error fetching followers: {error2}</div>
+          <div>Error fetching followers: {error2}</div>
         )}
       </section>
     </>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Profile from "./features/profile/Profile.tsx";
@@ -7,6 +8,9 @@ import {
   redirectToAuthCodeFlow,
   refreshAccessToken,
 } from "./services/spotifyApi.ts";
+import AppLayout from "./ui/AppLayout.tsx";
+import Error from "./ui/Error.tsx";
+import Sidebar from "./ui/Sidebar.tsx";
 
 const queryClient = new QueryClient();
 
@@ -15,7 +19,7 @@ const App = () => {
 
   useEffect(() => {
     const initToken = async () => {
-      const storedToken = localStorage.getItem("access-token");
+      const storedToken = localStorage.getItem("access_token");
 
       if (storedToken) {
         setToken(storedToken);
@@ -29,10 +33,14 @@ const App = () => {
       if (!code) {
         await redirectToAuthCodeFlow(clientId);
       } else {
-        const accessToken = await getAccessToken(clientId, code);
-        setToken(accessToken);
-        localStorage.setItem("access_token", accessToken);
-        window.history.replaceState({}, document.title, "/");
+        try {
+          const accessToken = await getAccessToken(clientId, code);
+          setToken(accessToken);
+          localStorage.setItem("access_token", accessToken);
+          window.history.replaceState({}, document.title, "/profile");
+        } catch (error) {
+          console.error("Failed to fetch access token", error);
+        }
       }
     };
     initToken();
@@ -42,18 +50,15 @@ const App = () => {
     if (token) {
       const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 
-      const interval = setInterval(
-        async () => {
-          try {
-            const newToken = await refreshAccessToken(clientId);
-            setToken(newToken);
-            window.history.replaceState({}, document.title, "/");
-          } catch (error) {
-            console.error("Failed to refresh access token", error);
-          }
-        },
-        3600 * 1000 - 10000
-      ); // Refresh 10 seconds before expiry
+      const interval = setInterval(async () => {
+        try {
+          const newToken = await refreshAccessToken(clientId);
+          setToken(newToken);
+          localStorage.setItem("access_token", newToken);
+        } catch (error) {
+          console.error("Failed to refresh access token", error);
+        }
+      }, 3600 * 1000 - 10000); // Refresh 10 seconds before expiry
 
       return () => clearInterval(interval); // Clean up the interval on unmount
     }
@@ -64,7 +69,15 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ReactQueryDevtools initialIsOpen={false} />
-      <Profile token={token} />
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppLayout />}>
+          <Route path="/" element={<Sidebar />} />
+            <Route path="profile" element={<Profile token={token} />} />
+          </Route>
+          <Route path="*" element={<Error />} />
+        </Routes>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };
