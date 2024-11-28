@@ -74,6 +74,7 @@ interface Playlist {
       height: number | null;
       width: number | null;
     }[];
+    name: string;
     owner: {
       external_urls: {
         spotify: string;
